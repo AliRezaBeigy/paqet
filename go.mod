@@ -3,18 +3,18 @@ module paqet
 go 1.25
 
 require (
-	github.com/goccy/go-yaml v1.18.0
+	github.com/goccy/go-yaml v1.19.0
 	github.com/google/gopacket v1.1.19
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/txthinking/socks5 v0.0.0-20251011041537-5c31f201a10e
-	github.com/xtaci/kcp-go/v5 v5.6.40
-	github.com/xtaci/smux v1.5.43
+	github.com/xtaci/kcp-go/v5 v5.6.45
+	github.com/xtaci/smux v1.5.44
 )
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
-	github.com/klauspost/reedsolomon v1.12.5 // indirect
+	github.com/klauspost/reedsolomon v1.12.6 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
