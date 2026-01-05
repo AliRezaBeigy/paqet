@@ -1,7 +1,6 @@
 package run
 
 import (
-	"fmt"
 	"log"
 	"paqet/internal/conf"
 	"paqet/internal/flog"
@@ -24,11 +23,6 @@ var Cmd = &cobra.Command{
 		cfg, err := conf.LoadFromFile(confPath)
 		if err != nil {
 			log.Fatalf("Failed to load configuration: %v", err)
-		}
-		if cfg.Transport.Protocol == "quic" {
-			fmt.Println("QUIC transport is currently under development and not fully implemented.")
-			fmt.Println("Please use KCP transport protocol instead.")
-			return
 		}
 		initialize(cfg)
 
