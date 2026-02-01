@@ -45,6 +45,8 @@ KCP provides reliable, encrypted communication optimized for high-loss or unpred
   - **macOS:** Comes pre-installed with Xcode Command Line Tools. Install with `xcode-select --install`
   - **Windows:** Install Npcap. Download from [npcap.com](https://npcap.com/).
 
+For building or running on **Android (rooted)**, see [docs/android.md](docs/android.md).
+
 ### 1. Download a Release
 
 Download the pre-compiled binary for your client and server operating systems from the project's **Releases page**.
