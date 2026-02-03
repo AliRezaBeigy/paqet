@@ -37,41 +37,54 @@ func NewRecvHandle(cfg *conf.Network) (*RecvHandle, error) {
 }
 
 func (h *RecvHandle) Read() ([]byte, net.Addr, error) {
-	data, _, err := h.handle.ZeroCopyReadPacketData()
-	if err != nil {
-		return nil, nil, err
-	}
+	for {
+		data, _, err := h.handle.ZeroCopyReadPacketData()
+		if err != nil {
+			return nil, nil, err
+		}
 
-	addr := &net.UDPAddr{}
-	p := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
+		addr := &net.UDPAddr{}
+		p := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.NoCopy)
 
-	netLayer := p.NetworkLayer()
-	if netLayer == nil {
-		return nil, addr, nil
-	}
-	switch netLayer.LayerType() {
-	case layers.LayerTypeIPv4:
-		addr.IP = netLayer.(*layers.IPv4).SrcIP
-	case layers.LayerTypeIPv6:
-		addr.IP = netLayer.(*layers.IPv6).SrcIP
-	}
+		netLayer := p.NetworkLayer()
+		if netLayer == nil {
+			continue
+		}
+		switch netLayer.LayerType() {
+		case layers.LayerTypeIPv4:
+			addr.IP = netLayer.(*layers.IPv4).SrcIP
+		case layers.LayerTypeIPv6:
+			addr.IP = netLayer.(*layers.IPv6).SrcIP
+		}
 
-	trLayer := p.TransportLayer()
-	if trLayer == nil {
-		return nil, addr, nil
-	}
-	switch trLayer.LayerType() {
-	case layers.LayerTypeTCP:
-		addr.Port = int(trLayer.(*layers.TCP).SrcPort)
-	case layers.LayerTypeUDP:
-		addr.Port = int(trLayer.(*layers.UDP).SrcPort)
-	}
+		trLayer := p.TransportLayer()
+		if trLayer == nil {
+			continue
+		}
+		switch trLayer.LayerType() {
+		case layers.LayerTypeTCP:
+			tcp := trLayer.(*layers.TCP)
+			addr.Port = int(tcp.SrcPort)
+			appLayer := p.ApplicationLayer()
+			// Skip SYN-only (no payload) packets: client sends SYN then PSH+ACK with data
+			// so that SYN is not dropped by kernels/firewalls; we only deliver the data packet.
+			if tcp.SYN && (appLayer == nil || len(appLayer.Payload()) == 0) {
+				continue
+			}
+			if appLayer == nil {
+				continue
+			}
+			return appLayer.Payload(), addr, nil
+		case layers.LayerTypeUDP:
+			addr.Port = int(trLayer.(*layers.UDP).SrcPort)
+		}
 
-	appLayer := p.ApplicationLayer()
-	if appLayer == nil {
-		return nil, addr, nil
+		appLayer := p.ApplicationLayer()
+		if appLayer == nil {
+			continue
+		}
+		return appLayer.Payload(), addr, nil
 	}
-	return appLayer.Payload(), addr, nil
 }
 
 func (h *RecvHandle) Close() {

@@ -166,7 +166,28 @@ func (h *SendHandle) buildTCPHeader(dstPort uint16, f conf.TCPF) *layers.TCP {
 	return tcp
 }
 
+// defaultPA is used when splitting SYN+payload: the data is sent in a PSH+ACK segment
+// because many kernels and firewalls drop SYN segments that carry payload.
+var defaultPA = conf.TCPF{PSH: true, ACK: true}
+
 func (h *SendHandle) Write(payload []byte, addr *net.UDPAddr) error {
+	dstIP := addr.IP
+	dstPort := uint16(addr.Port)
+	f := h.getClientTCPF(dstIP, dstPort)
+
+	// Many kernels and firewalls drop TCP SYN segments that carry payload (RFC-nonstandard).
+	// When local flag is SYN and we have payload, send two packets: SYN (no payload) then
+	// PSH+ACK (payload) so the SYN is not dropped and the server receives the data.
+	if f.SYN && len(payload) > 0 {
+		if err := h.writeOne(dstIP, dstPort, f, nil, addr); err != nil {
+			return err
+		}
+		return h.writeOne(dstIP, dstPort, defaultPA, payload, addr)
+	}
+	return h.writeOne(dstIP, dstPort, f, payload, addr)
+}
+
+func (h *SendHandle) writeOne(dstIP net.IP, dstPort uint16, f conf.TCPF, payload []byte, addr *net.UDPAddr) error {
 	buf := h.bufPool.Get().(gopacket.SerializeBuffer)
 	ethLayer := h.ethPool.Get().(*layers.Ethernet)
 	defer func() {
@@ -175,10 +196,6 @@ func (h *SendHandle) Write(payload []byte, addr *net.UDPAddr) error {
 		h.ethPool.Put(ethLayer)
 	}()
 
-	dstIP := addr.IP
-	dstPort := uint16(addr.Port)
-
-	f := h.getClientTCPF(dstIP, dstPort)
 	tcpLayer := h.buildTCPHeader(dstPort, f)
 	defer h.tcpPool.Put(tcpLayer)
 
